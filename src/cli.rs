@@ -9,7 +9,7 @@ use crate::docker::{Backend, BollardBackend};
 #[derive(Parser, Debug)]
 #[command(
     name = "ts",
-    version,
+    version = env!("PKG_GIT_VERSION"),
     about = "Manage container infrastructure for tests"
 )]
 pub struct GlobalArgs {

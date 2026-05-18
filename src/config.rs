@@ -39,7 +39,7 @@ impl Config {
         };
         let min = Version::parse(raw.trim_start_matches('v'))
             .with_context(|| format!("invalid tests.min_version: {raw}"))?;
-        let cur = Version::parse(env!("CARGO_PKG_VERSION"))?;
+        let cur = Version::parse(parse_semver_prefix(env!("PKG_GIT_VERSION")))?;
         if min > cur {
             anyhow::bail!("teststack {cur} too old; need >= {min}");
         }
@@ -89,6 +89,18 @@ fn interpolate(v: Value) -> Value {
         Value::Table(t) => Value::Table(t.into_iter().map(|(k, v)| (k, interpolate(v))).collect()),
         Value::Array(a) => Value::Array(a.into_iter().map(interpolate).collect()),
         other => other,
+    }
+}
+
+fn parse_semver_prefix(s: &str) -> &str {
+    // git-describe output is `<tag>[-<n>-g<sha>][-dirty]`. semver would
+    // (mis)read `-<n>-g<sha>` as a pre-release, which compares LOWER than
+    // the bare tag. For min_version checking we want the opposite: a build
+    // beyond the tag should compare HIGHER. Strip everything past the
+    // numeric tag.
+    match s.split_once('-') {
+        Some((tag, _)) => tag,
+        None => s,
     }
 }
 
