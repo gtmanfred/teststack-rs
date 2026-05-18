@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use indexmap::IndexMap;
 use toml::Value;
 
 #[derive(Debug, Clone, Default)]
@@ -28,8 +28,8 @@ impl StepCommand {
     }
 }
 
-pub fn process_steps(table: BTreeMap<String, Value>) -> BTreeMap<String, Step> {
-    let mut out: BTreeMap<String, Step> = BTreeMap::new();
+pub fn process_steps(table: IndexMap<String, Value>) -> IndexMap<String, Step> {
+    let mut out: IndexMap<String, Step> = IndexMap::new();
     for (name, raw) in table {
         let mut s = out.remove(&name).unwrap_or_default();
         s.name = name.clone();
@@ -82,7 +82,7 @@ pub trait StepRunner {
     fn run(&mut self, command: &str, user: Option<&str>) -> i64;
 }
 
-pub fn run_all<R: StepRunner>(steps: &mut BTreeMap<String, Step>, runner: &mut R, posargs: &[String]) -> i64 {
+pub fn run_all<R: StepRunner>(steps: &mut IndexMap<String, Step>, runner: &mut R, posargs: &[String]) -> i64 {
     let names: Vec<String> = steps.keys().cloned().collect();
     for n in names {
         let code = run_step(&n, steps, runner, posargs);
@@ -93,7 +93,7 @@ pub fn run_all<R: StepRunner>(steps: &mut BTreeMap<String, Step>, runner: &mut R
 
 fn run_step<R: StepRunner>(
     name: &str,
-    steps: &mut BTreeMap<String, Step>,
+    steps: &mut IndexMap<String, Step>,
     runner: &mut R,
     posargs: &[String],
 ) -> i64 {
@@ -149,7 +149,7 @@ fn run_step<R: StepRunner>(
 
 fn do_check<R: StepRunner>(
     name: &str,
-    steps: &mut BTreeMap<String, Step>,
+    steps: &mut IndexMap<String, Step>,
     runner: &mut R,
     posargs: &[String],
 ) -> i64 {
@@ -189,6 +189,7 @@ fn run_cmd<R: StepRunner>(cmd: &StepCommand, user: Option<&str>, runner: &mut R,
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
 
     struct Fake {
         pub log: Vec<String>,
@@ -212,7 +213,7 @@ mod tests {
         "#;
         let v: Value = toml::from_str(toml).unwrap();
         let t = v.get("steps").unwrap().as_table().unwrap().clone();
-        let map: BTreeMap<String, Value> = t.into_iter().collect();
+        let map: IndexMap<String, Value> = t.into_iter().collect();
         let mut steps = process_steps(map);
         let mut runner = Fake {
             log: vec![],
@@ -221,6 +222,24 @@ mod tests {
         run_all(&mut steps, &mut runner, &[]);
         assert!(runner.log.contains(&"test -f /a".into()));
         assert!(!runner.log.contains(&"env".into()));
+    }
+
+    #[test]
+    fn preserves_toml_order() {
+        let toml = r#"
+            [steps]
+            install = "pip install"
+            database = "migrate"
+            flake8 = "flake8"
+            tests = "pytest"
+        "#;
+        let v: Value = toml::from_str(toml).unwrap();
+        let t = v.get("steps").unwrap().as_table().unwrap().clone();
+        let map: IndexMap<String, Value> = t.into_iter().collect();
+        let mut steps = process_steps(map);
+        let mut runner = Fake { log: vec![], map: BTreeMap::new() };
+        run_all(&mut steps, &mut runner, &[]);
+        assert_eq!(runner.log, vec!["pip install", "migrate", "flake8", "pytest"]);
     }
 
     #[test]
@@ -234,7 +253,7 @@ mod tests {
         "#;
         let v: Value = toml::from_str(toml).unwrap();
         let t = v.get("steps").unwrap().as_table().unwrap().clone();
-        let map: BTreeMap<String, Value> = t.into_iter().collect();
+        let map: IndexMap<String, Value> = t.into_iter().collect();
         let mut steps = process_steps(map);
         let mut runner = Fake { log: vec![], map: BTreeMap::new() };
         run_all(&mut steps, &mut runner, &[]);

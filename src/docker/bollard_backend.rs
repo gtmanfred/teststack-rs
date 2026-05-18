@@ -19,10 +19,68 @@ pub struct BollardBackend {
 
 impl BollardBackend {
     pub fn connect() -> Result<Self> {
-        let docker = Docker::connect_with_local_defaults()
-            .context("connect to docker daemon")?;
+        let docker = match resolve_context_host()? {
+            Some(host) => connect_with_host(&host)?,
+            None => Docker::connect_with_local_defaults().context("connect to docker daemon")?,
+        };
         Ok(Self { docker })
     }
+}
+
+fn connect_with_host(host: &str) -> Result<Docker> {
+    if let Some(path) = host.strip_prefix("unix://") {
+        Docker::connect_with_unix(path, 120, bollard::API_DEFAULT_VERSION)
+            .with_context(|| format!("connect unix:{path}"))
+    } else if host.starts_with("tcp://") || host.starts_with("http://") || host.starts_with("https://") {
+        Docker::connect_with_http(host, 120, bollard::API_DEFAULT_VERSION)
+            .with_context(|| format!("connect {host}"))
+    } else {
+        anyhow::bail!("unsupported docker host scheme: {host}")
+    }
+}
+
+fn resolve_context_host() -> Result<Option<String>> {
+    if std::env::var_os("DOCKER_HOST").is_some() {
+        return Ok(None);
+    }
+    let name = match std::env::var("DOCKER_CONTEXT") {
+        Ok(n) => n,
+        Err(_) => read_current_context()?.unwrap_or_else(|| "default".into()),
+    };
+    if name == "default" {
+        return Ok(None);
+    }
+    read_context_host(&name)
+}
+
+fn read_current_context() -> Result<Option<String>> {
+    let Some(home) = dirs::home_dir() else { return Ok(None) };
+    let cfg_path = home.join(".docker/config.json");
+    if !cfg_path.exists() {
+        return Ok(None);
+    }
+    let raw = std::fs::read_to_string(&cfg_path)?;
+    let v: serde_json::Value = serde_json::from_str(&raw)?;
+    Ok(v.get("currentContext").and_then(|c| c.as_str()).map(String::from))
+}
+
+fn read_context_host(name: &str) -> Result<Option<String>> {
+    use sha2::{Digest, Sha256};
+    let Some(home) = dirs::home_dir() else { return Ok(None) };
+    let digest = Sha256::digest(name.as_bytes());
+    let id = hex::encode(digest);
+    let meta_path = home.join(format!(".docker/contexts/meta/{id}/meta.json"));
+    if !meta_path.exists() {
+        return Ok(None);
+    }
+    let raw = std::fs::read_to_string(&meta_path)
+        .with_context(|| format!("read {meta_path:?}"))?;
+    let v: serde_json::Value = serde_json::from_str(&raw)?;
+    let host = v
+        .pointer("/Endpoints/docker/Host")
+        .and_then(|h| h.as_str())
+        .map(String::from);
+    Ok(host)
 }
 
 #[async_trait]

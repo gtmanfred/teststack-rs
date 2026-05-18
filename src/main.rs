@@ -17,7 +17,6 @@ mod commands {
 }
 
 use anyhow::Result;
-use clap::Parser;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -30,6 +29,5 @@ async fn main() -> Result<()> {
         .without_time()
         .init();
 
-    let app = cli::Cli::parse();
-    cli::dispatch(app).await
+    cli::run_cli().await
 }

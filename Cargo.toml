@@ -6,7 +6,7 @@ description = "Manage container infrastructure for running tests"
 license = "Apache-2.0"
 
 [[bin]]
-name = "teststack"
+name = "ts"
 path = "src/main.rs"
 
 [dependencies]
@@ -14,7 +14,8 @@ clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 bollard = "0.17"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "io-util", "io-std", "signal", "fs", "process"] }
 serde = { version = "1", features = ["derive"] }
-toml = "0.8"
+toml = { version = "0.8", features = ["preserve_order"] }
+indexmap = "2"
 minijinja = { version = "2", features = ["loop_controls", "json"] }
 git2 = { version = "0.19", default-features = false }
 crossterm = "0.28"
@@ -28,6 +29,9 @@ futures-util = "0.3"
 tar = "0.4"
 async-trait = "0.1"
 shell-words = "1"
+serde_json = "1"
+sha2 = "0.10"
+hex = "0.4"
 
 [features]
 default = []

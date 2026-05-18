@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Args;
-use std::collections::BTreeMap;
+use indexmap::IndexMap;
 
 use crate::cli::Ctx;
 use crate::docker::Backend;
@@ -23,18 +23,18 @@ pub async fn run(ctx: &Ctx, a: RunArgs) -> Result<()> {
         anyhow::bail!("no tests container running");
     };
 
-    let mut steps_table: BTreeMap<String, Value> = match ctx.config.get("tests.steps") {
+    let mut steps_table: IndexMap<String, Value> = match ctx.config.get("tests.steps") {
         Some(Value::Table(t)) => t.into_iter().collect(),
         _ => Default::default(),
     };
     if let Some(name) = &a.step {
-        let stepobj = steps_table.remove(name).unwrap_or_else(|| Value::String("{posargs}".into()));
-        let mut filtered: BTreeMap<String, Value> = BTreeMap::new();
+        let stepobj = steps_table.shift_remove(name).unwrap_or_else(|| Value::String("{posargs}".into()));
+        let mut filtered: IndexMap<String, Value> = IndexMap::new();
         if let Value::Table(ref t) = stepobj {
             if let Some(Value::Array(reqs)) = t.get("requires") {
                 for r in reqs {
                     if let Some(rn) = r.as_str() {
-                        if let Some(v) = steps_table.remove(rn) {
+                        if let Some(v) = steps_table.shift_remove(rn) {
                             filtered.insert(rn.into(), v);
                         }
                     }

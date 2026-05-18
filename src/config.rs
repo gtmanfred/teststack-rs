@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
+use indexmap::IndexMap;
 use semver::Version;
-use std::collections::BTreeMap;
 use std::path::Path;
 use toml::Value;
 
@@ -56,7 +56,7 @@ impl Config {
         self.get(key).and_then(|v| v.as_str().map(|s| s.to_string()))
     }
 
-    pub fn get_table(&self, key: &str) -> BTreeMap<String, Value> {
+    pub fn get_table(&self, key: &str) -> IndexMap<String, Value> {
         match self.get(key) {
             Some(Value::Table(t)) => t.into_iter().collect(),
             _ => Default::default(),
