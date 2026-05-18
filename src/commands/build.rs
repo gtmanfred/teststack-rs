@@ -7,7 +7,7 @@ use crate::cli::Ctx;
 use crate::docker::BuildOpts;
 use toml::Value;
 
-#[derive(Args, Debug, Default)]
+#[derive(Args, Debug)]
 pub struct BuildArgs {
     #[arg(short = 'r', long)]
     pub rebuild: bool,
@@ -28,6 +28,20 @@ pub struct BuildArgs {
     pub service: Option<String>,
     #[arg(long)]
     pub stage: Option<String>,
+}
+
+impl Default for BuildArgs {
+    fn default() -> Self {
+        Self {
+            rebuild: false,
+            tag: None,
+            dockerfile: PathBuf::from("Dockerfile"),
+            template_file: PathBuf::from("Dockerfile.j2"),
+            directory: PathBuf::from("."),
+            service: None,
+            stage: None,
+        }
+    }
 }
 
 pub async fn run(ctx: &Ctx, a: BuildArgs) -> Result<String> {
