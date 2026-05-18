@@ -66,7 +66,10 @@ pub async fn run(ctx: &Ctx, a: BuildArgs) -> Result<String> {
     }
 
     let tag = tag.unwrap_or_else(|| ctx.tag.clone());
-    let platform = ctx.config.get_string("tests.platform");
+    let platform = match &a.service {
+        Some(svc) => ctx.config.get_string(&format!("services.{svc}.platform")),
+        None => ctx.config.get_string("tests.platform"),
+    };
     tracing::info!("Build Image: {tag}");
     ctx.backend()
         .build(BuildOpts {

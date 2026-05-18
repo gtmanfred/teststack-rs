@@ -21,7 +21,7 @@ pub struct StartArgs {
 
 pub async fn run(ctx: &Ctx, mut a: StartArgs) -> Result<Option<String>> {
     let services = ctx.config.get_table("services");
-    let platform = ctx.config.get_string("tests.platform");
+    let tests_platform = ctx.config.get_string("tests.platform");
     if !a.no_mount {
         a.no_mount = !ctx
             .config
@@ -91,7 +91,10 @@ pub async fn run(ctx: &Ctx, mut a: StartArgs) -> Result<Option<String>> {
                     hostname: service.clone(),
                     mount_cwd: false,
                     user: None,
-                    platform: platform.clone(),
+                    platform: data
+                        .get("platform")
+                        .and_then(|v| v.as_str())
+                        .map(String::from),
                 })
                 .await
                 .with_context(|| format!("run {name}"))?;
@@ -174,7 +177,7 @@ pub async fn run(ctx: &Ctx, mut a: StartArgs) -> Result<Option<String>> {
             hostname: "tests".into(),
             mount_cwd: !a.no_mount,
             user: None,
-            platform: platform.clone(),
+            platform: tests_platform.clone(),
         })
         .await?;
     Ok(Some(container))
