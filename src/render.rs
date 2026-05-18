@@ -16,6 +16,7 @@ pub fn render_template(
     }
 
     let mut env = Environment::new();
+    env.set_keep_trailing_newline(true);
     env.add_template("dockerfile", &tmpl)?;
 
     let mut ctx: BTreeMap<String, Value> = BTreeMap::new();

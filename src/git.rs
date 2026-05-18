@@ -31,7 +31,7 @@ pub fn get_tag(prefix: &str) -> Result<GitInfo> {
     let commit = head
         .as_ref()
         .and_then(|h| h.peel_to_commit().ok())
-        .map(|c| c.id().to_string()[..12].to_string());
+        .map(|c| c.id().to_string());
     let branch = head.as_ref().and_then(|h| h.shorthand().map(String::from));
 
     let described = describe_tag(&repo);
