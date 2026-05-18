@@ -19,7 +19,7 @@ cargo install --path .
 ```
 
 Prebuilt binaries are attached to each GitHub Release (`v*` tags):
-`aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`,
+`aarch64-apple-darwin`, `x86_64-unknown-linux-gnu`,
 `aarch64-unknown-linux-gnu`. Download the tarball matching your platform
 and drop the extracted `ts` binary on your `$PATH`.
 
