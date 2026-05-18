@@ -1,0 +1,38 @@
+[package]
+name = "teststack"
+version = "0.14.0"
+edition = "2021"
+description = "Manage container infrastructure for running tests"
+license = "Apache-2.0"
+
+[[bin]]
+name = "teststack"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive", "env", "wrap_help"] }
+bollard = "0.17"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "io-util", "io-std", "signal", "fs", "process"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+minijinja = { version = "2", features = ["loop_controls", "json"] }
+git2 = { version = "0.19", default-features = false }
+crossterm = "0.28"
+anyhow = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+semver = "1"
+dirs = "5"
+futures-util = "0.3"
+tar = "0.4"
+async-trait = "0.1"
+shell-words = "1"
+
+[features]
+default = []
+live-docker = []
+
+[profile.release]
+lto = "thin"
+strip = true
