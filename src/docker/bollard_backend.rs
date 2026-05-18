@@ -169,6 +169,7 @@ impl Backend for BollardBackend {
             tracing::info!("Pulling image: {}", spec.image);
             let opts = bollard::image::CreateImageOptions {
                 from_image: spec.image.clone(),
+                platform: spec.platform.clone().unwrap_or_default(),
                 ..Default::default()
             };
             let mut stream = self.docker.create_image(Some(opts), None, None);
@@ -260,7 +261,7 @@ impl Backend for BollardBackend {
             .create_container(
                 Some(CreateContainerOptions {
                     name: spec.name.clone(),
-                    platform: None,
+                    platform: spec.platform.clone(),
                 }),
                 cfg,
             )
@@ -384,6 +385,9 @@ impl Backend for BollardBackend {
             .arg("--rm");
         if let Some(stage) = &opts.stage {
             cmd.arg(format!("--target={stage}"));
+        }
+        if let Some(platform) = &opts.platform {
+            cmd.arg(format!("--platform={platform}"));
         }
         for (k, v) in &opts.buildargs {
             cmd.arg(format!("--build-arg={k}={v}"));

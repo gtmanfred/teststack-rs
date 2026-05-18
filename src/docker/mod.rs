@@ -18,6 +18,7 @@ pub struct RunSpec {
     pub hostname: String,
     pub mount_cwd: bool,
     pub user: Option<String>,
+    pub platform: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -77,4 +78,5 @@ pub struct BuildOpts {
     pub buildargs: BTreeMap<String, String>,
     pub secrets: BTreeMap<String, PathBuf>,
     pub stage: Option<String>,
+    pub platform: Option<String>,
 }

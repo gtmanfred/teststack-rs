@@ -66,6 +66,7 @@ pub async fn run(ctx: &Ctx, a: BuildArgs) -> Result<String> {
     }
 
     let tag = tag.unwrap_or_else(|| ctx.tag.clone());
+    let platform = ctx.config.get_string("tests.platform");
     tracing::info!("Build Image: {tag}");
     ctx.backend()
         .build(BuildOpts {
@@ -76,6 +77,7 @@ pub async fn run(ctx: &Ctx, a: BuildArgs) -> Result<String> {
             buildargs,
             secrets,
             stage,
+            platform,
         })
         .await
         .context("build image")?;
