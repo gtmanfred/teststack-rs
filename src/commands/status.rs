@@ -13,7 +13,11 @@ pub async fn run(ctx: &Ctx) -> Result<()> {
             }
         }
         let name = format!("{}_{}", ctx.project_name, service);
-        let status = ctx.backend().status(&name).await.unwrap_or_else(|_| "error".into());
+        let status = ctx
+            .backend()
+            .status(&name)
+            .await
+            .unwrap_or_else(|_| "error".into());
         let inspect = ctx
             .backend()
             .inspect_data(&name, &ctx.project_name, false)
@@ -26,7 +30,11 @@ pub async fn run(ctx: &Ctx) -> Result<()> {
         println!("{status:^16}|{name:^36}|{data_str:^16}");
     }
     let name = format!("{}_tests", ctx.project_name);
-    let status = ctx.backend().status(&name).await.unwrap_or_else(|_| "error".into());
+    let status = ctx
+        .backend()
+        .status(&name)
+        .await
+        .unwrap_or_else(|_| "error".into());
     println!("{status:^16}|{name:^36}|{:^16}", "");
     Ok(())
 }

@@ -72,7 +72,9 @@ pub async fn run(ctx: &Ctx, mut a: StartArgs) -> Result<Option<String>> {
                     shell_words::split(s).unwrap_or_else(|_| vec![s.clone()]),
                 )),
                 Some(Value::Array(a)) => Some(CommandSpec::Custom(
-                    a.iter().filter_map(|v| v.as_str().map(String::from)).collect(),
+                    a.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect(),
                 )),
                 _ => None,
             };
@@ -107,12 +109,15 @@ pub async fn run(ctx: &Ctx, mut a: StartArgs) -> Result<Option<String>> {
         return Ok(None);
     }
 
-    let env_lines = crate::commands::env::collect(ctx, crate::commands::env::EnvArgs {
-        prefix: a.prefix.clone(),
-        inside: true,
-        no_export: true,
-        quiet: true,
-    })
+    let env_lines = crate::commands::env::collect(
+        ctx,
+        crate::commands::env::EnvArgs {
+            prefix: a.prefix.clone(),
+            inside: true,
+            no_export: true,
+            quiet: true,
+        },
+    )
     .await?;
     let mut env: BTreeMap<String, String> = BTreeMap::new();
     for line in env_lines {
@@ -144,7 +149,9 @@ pub async fn run(ctx: &Ctx, mut a: StartArgs) -> Result<Option<String>> {
             shell_words::split(&s).unwrap_or_else(|_| vec![s.clone()]),
         )),
         Some(Value::Array(a)) => Some(CommandSpec::Custom(
-            a.iter().filter_map(|v| v.as_str().map(String::from)).collect(),
+            a.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect(),
         )),
         _ => Some(CommandSpec::Sleep),
     };
@@ -171,27 +178,37 @@ pub async fn run(ctx: &Ctx, mut a: StartArgs) -> Result<Option<String>> {
 }
 
 fn parse_string_table(v: Option<&Value>) -> BTreeMap<String, String> {
-    let Some(Value::Table(t)) = v else { return Default::default() };
+    let Some(Value::Table(t)) = v else {
+        return Default::default();
+    };
     t.iter()
         .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
         .collect()
 }
 
 fn parse_ports(v: Option<&Value>) -> BTreeMap<String, String> {
-    let Some(Value::Table(t)) = v else { return Default::default() };
+    let Some(Value::Table(t)) = v else {
+        return Default::default();
+    };
     t.iter()
         .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string()))
         .collect()
 }
 
 fn parse_mounts(v: Option<&Value>) -> Vec<VolumeMount> {
-    let Some(Value::Table(t)) = v else { return Vec::new() };
+    let Some(Value::Table(t)) = v else {
+        return Vec::new();
+    };
     let mut out = Vec::new();
     for (_, m) in t {
         let Value::Table(m) = m else { continue };
         let source = m.get("source").and_then(|v| v.as_str()).unwrap_or("");
         let target = m.get("target").and_then(|v| v.as_str()).unwrap_or("");
-        let mode = m.get("mode").and_then(|v| v.as_str()).unwrap_or("ro").to_string();
+        let mode = m
+            .get("mode")
+            .and_then(|v| v.as_str())
+            .unwrap_or("ro")
+            .to_string();
         if source.is_empty() || target.is_empty() {
             continue;
         }

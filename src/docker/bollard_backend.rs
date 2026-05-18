@@ -1,13 +1,15 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use bollard::container::{Config as ContainerConfig, CreateContainerOptions, ListContainersOptions, LogsOptions, RemoveContainerOptions, StartContainerOptions, StopContainerOptions};
+use bollard::container::{
+    Config as ContainerConfig, CreateContainerOptions, LogsOptions, RemoveContainerOptions,
+    StartContainerOptions, StopContainerOptions,
+};
 use bollard::exec::{CreateExecOptions, StartExecOptions, StartExecResults};
-use bollard::image::BuildImageOptions;
 use bollard::models::{HostConfig, Mount, MountTypeEnum, PortBinding};
 use bollard::network::{CreateNetworkOptions, ListNetworksOptions, PruneNetworksOptions};
 use bollard::Docker;
 use futures_util::StreamExt;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::process::Stdio;
 use tokio::process::Command;
 
@@ -31,7 +33,10 @@ fn connect_with_host(host: &str) -> Result<Docker> {
     if let Some(path) = host.strip_prefix("unix://") {
         Docker::connect_with_unix(path, 120, bollard::API_DEFAULT_VERSION)
             .with_context(|| format!("connect unix:{path}"))
-    } else if host.starts_with("tcp://") || host.starts_with("http://") || host.starts_with("https://") {
+    } else if host.starts_with("tcp://")
+        || host.starts_with("http://")
+        || host.starts_with("https://")
+    {
         Docker::connect_with_http(host, 120, bollard::API_DEFAULT_VERSION)
             .with_context(|| format!("connect {host}"))
     } else {
@@ -54,27 +59,32 @@ fn resolve_context_host() -> Result<Option<String>> {
 }
 
 fn read_current_context() -> Result<Option<String>> {
-    let Some(home) = dirs::home_dir() else { return Ok(None) };
+    let Some(home) = dirs::home_dir() else {
+        return Ok(None);
+    };
     let cfg_path = home.join(".docker/config.json");
     if !cfg_path.exists() {
         return Ok(None);
     }
     let raw = std::fs::read_to_string(&cfg_path)?;
     let v: serde_json::Value = serde_json::from_str(&raw)?;
-    Ok(v.get("currentContext").and_then(|c| c.as_str()).map(String::from))
+    Ok(v.get("currentContext")
+        .and_then(|c| c.as_str())
+        .map(String::from))
 }
 
 fn read_context_host(name: &str) -> Result<Option<String>> {
     use sha2::{Digest, Sha256};
-    let Some(home) = dirs::home_dir() else { return Ok(None) };
+    let Some(home) = dirs::home_dir() else {
+        return Ok(None);
+    };
     let digest = Sha256::digest(name.as_bytes());
     let id = hex::encode(digest);
     let meta_path = home.join(format!(".docker/contexts/meta/{id}/meta.json"));
     if !meta_path.exists() {
         return Ok(None);
     }
-    let raw = std::fs::read_to_string(&meta_path)
-        .with_context(|| format!("read {meta_path:?}"))?;
+    let raw = std::fs::read_to_string(&meta_path).with_context(|| format!("read {meta_path:?}"))?;
     let v: serde_json::Value = serde_json::from_str(&raw)?;
     let host = v
         .pointer("/Endpoints/docker/Host")
@@ -88,7 +98,9 @@ impl Backend for BollardBackend {
     async fn container_get(&self, name: &str) -> Result<Option<String>> {
         match self.docker.inspect_container(name, None).await {
             Ok(c) => Ok(c.id),
-            Err(bollard::errors::Error::DockerResponseServerError { status_code: 404, .. }) => Ok(None),
+            Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 404, ..
+            }) => Ok(None),
             Err(e) => Err(e.into()),
         }
     }
@@ -96,7 +108,9 @@ impl Backend for BollardBackend {
     async fn container_image_id(&self, name: &str) -> Result<Option<String>> {
         match self.docker.inspect_container(name, None).await {
             Ok(c) => Ok(c.image),
-            Err(bollard::errors::Error::DockerResponseServerError { status_code: 404, .. }) => Ok(None),
+            Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 404, ..
+            }) => Ok(None),
             Err(e) => Err(e.into()),
         }
     }
@@ -104,7 +118,9 @@ impl Backend for BollardBackend {
     async fn image_get(&self, tag: &str) -> Result<Option<String>> {
         match self.docker.inspect_image(tag).await {
             Ok(i) => Ok(i.id),
-            Err(bollard::errors::Error::DockerResponseServerError { status_code: 404, .. }) => Ok(None),
+            Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 404, ..
+            }) => Ok(None),
             Err(e) => Err(e.into()),
         }
     }
@@ -112,7 +128,9 @@ impl Backend for BollardBackend {
     async fn image_workdir(&self, tag: &str) -> Result<Option<String>> {
         match self.docker.inspect_image(tag).await {
             Ok(i) => Ok(i.config.and_then(|c| c.working_dir)),
-            Err(bollard::errors::Error::DockerResponseServerError { status_code: 404, .. }) => Ok(None),
+            Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 404, ..
+            }) => Ok(None),
             Err(e) => Err(e.into()),
         }
     }
@@ -120,7 +138,10 @@ impl Backend for BollardBackend {
     async fn network_ensure(&self, name: &str) -> Result<()> {
         let mut filters = HashMap::new();
         filters.insert("name".to_string(), vec![name.to_string()]);
-        let nets = self.docker.list_networks(Some(ListNetworksOptions { filters })).await?;
+        let nets = self
+            .docker
+            .list_networks(Some(ListNetworksOptions { filters }))
+            .await?;
         if nets.iter().any(|n| n.name.as_deref() == Some(name)) {
             return Ok(());
         }
@@ -135,7 +156,9 @@ impl Backend for BollardBackend {
     }
 
     async fn network_prune(&self) -> Result<()> {
-        self.docker.prune_networks(None::<PruneNetworksOptions<String>>).await?;
+        self.docker
+            .prune_networks(None::<PruneNetworksOptions<String>>)
+            .await?;
         Ok(())
     }
 
@@ -154,7 +177,11 @@ impl Backend for BollardBackend {
             }
         }
 
-        let mut env: Vec<String> = spec.environment.iter().map(|(k, v)| format!("{k}={v}")).collect();
+        let mut env: Vec<String> = spec
+            .environment
+            .iter()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect();
         env.sort();
 
         let mut port_bindings: HashMap<String, Option<Vec<PortBinding>>> = HashMap::new();
@@ -163,7 +190,11 @@ impl Backend for BollardBackend {
             exposed.insert(port.clone(), HashMap::new());
             let binding = PortBinding {
                 host_ip: None,
-                host_port: if host.is_empty() { None } else { Some(host.clone()) },
+                host_port: if host.is_empty() {
+                    None
+                } else {
+                    Some(host.clone())
+                },
             };
             port_bindings.insert(port.clone(), Some(vec![binding]));
         }
@@ -197,7 +228,8 @@ impl Backend for BollardBackend {
                 Some(vec!["/bin/sh".to_string()]),
                 Some(vec![
                     "-c".to_string(),
-                    "trap \"trap - TERM; kill -s TERM -- -$$\" TERM; tail -f /dev/null & wait".into(),
+                    "trap \"trap - TERM; kill -s TERM -- -$$\" TERM; tail -f /dev/null & wait"
+                        .into(),
                 ]),
             ),
             Some(CommandSpec::Custom(c)) => (None, Some(c.clone())),
@@ -246,13 +278,18 @@ impl Backend for BollardBackend {
             .await
         {
             Ok(_) => Ok(()),
-            Err(bollard::errors::Error::DockerResponseServerError { status_code: 304, .. }) => Ok(()),
+            Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 304, ..
+            }) => Ok(()),
             Err(e) => Err(e.into()),
         }
     }
 
     async fn stop_remove(&self, name: &str) -> Result<()> {
-        let _ = self.docker.stop_container(name, Some(StopContainerOptions { t: 10 })).await;
+        let _ = self
+            .docker
+            .stop_container(name, Some(StopContainerOptions { t: 10 }))
+            .await;
         let _ = self
             .docker
             .remove_container(
@@ -269,8 +306,13 @@ impl Backend for BollardBackend {
 
     async fn status(&self, name: &str) -> Result<String> {
         match self.docker.inspect_container(name, None).await {
-            Ok(c) => Ok(c.state.and_then(|s| s.status.map(|s| format!("{s:?}").to_lowercase())).unwrap_or_else(|| "unknown".into())),
-            Err(bollard::errors::Error::DockerResponseServerError { status_code: 404, .. }) => Ok("notfound".into()),
+            Ok(c) => Ok(c
+                .state
+                .and_then(|s| s.status.map(|s| format!("{s:?}").to_lowercase()))
+                .unwrap_or_else(|| "unknown".into())),
+            Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 404, ..
+            }) => Ok("notfound".into()),
             Err(e) => Err(e.into()),
         }
     }
@@ -293,10 +335,17 @@ impl Backend for BollardBackend {
         Ok(out)
     }
 
-    async fn inspect_data(&self, name: &str, network: &str, inside: bool) -> Result<Option<ContainerData>> {
+    async fn inspect_data(
+        &self,
+        name: &str,
+        network: &str,
+        inside: bool,
+    ) -> Result<Option<ContainerData>> {
         let c = match self.docker.inspect_container(name, None).await {
             Ok(c) => c,
-            Err(bollard::errors::Error::DockerResponseServerError { status_code: 404, .. }) => return Ok(None),
+            Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 404, ..
+            }) => return Ok(None),
             Err(e) => return Err(e.into()),
         };
         let ns = c.network_settings.unwrap_or_default();
@@ -348,7 +397,9 @@ impl Backend for BollardBackend {
         }
         cmd.arg(opts.directory.as_os_str());
         cmd.env("DOCKER_BUILDKIT", "1");
-        cmd.stdin(Stdio::inherit()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
+        cmd.stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
         let status = cmd.status().await.context("spawn docker build")?;
         if !status.success() {
             anyhow::bail!("docker build failed: {status}");
@@ -370,7 +421,10 @@ impl Backend for BollardBackend {
                 },
             )
             .await?;
-        let mut started = self.docker.start_exec(&exec.id, None::<StartExecOptions>).await?;
+        let started = self
+            .docker
+            .start_exec(&exec.id, None::<StartExecOptions>)
+            .await?;
         if let StartExecResults::Attached { mut output, .. } = started {
             while let Some(chunk) = output.next().await {
                 if let Ok(c) = chunk {
@@ -382,7 +436,12 @@ impl Backend for BollardBackend {
         Ok(inspect.exit_code.unwrap_or(0))
     }
 
-    async fn exec_interactive(&self, container: &str, command: &[String], user: Option<&str>) -> Result<()> {
+    async fn exec_interactive(
+        &self,
+        container: &str,
+        command: &[String],
+        user: Option<&str>,
+    ) -> Result<()> {
         let mut cmd = Command::new("docker");
         cmd.arg("exec").arg("-ti");
         if let Some(u) = user {

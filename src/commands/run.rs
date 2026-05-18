@@ -28,7 +28,9 @@ pub async fn run(ctx: &Ctx, a: RunArgs) -> Result<()> {
         _ => Default::default(),
     };
     if let Some(name) = &a.step {
-        let stepobj = steps_table.shift_remove(name).unwrap_or_else(|| Value::String("{posargs}".into()));
+        let stepobj = steps_table
+            .shift_remove(name)
+            .unwrap_or_else(|| Value::String("{posargs}".into()));
         let mut filtered: IndexMap<String, Value> = IndexMap::new();
         if let Value::Table(ref t) = stepobj {
             if let Some(Value::Array(reqs)) = t.get("requires") {

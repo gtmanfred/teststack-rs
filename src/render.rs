@@ -3,7 +3,12 @@ use minijinja::{Environment, Value};
 use std::collections::BTreeMap;
 use std::path::Path;
 
-pub fn render_template(template_path: &Path, dockerfile: &Path, commit: Option<&str>, branch: Option<&str>) -> Result<()> {
+pub fn render_template(
+    template_path: &Path,
+    dockerfile: &Path,
+    commit: Option<&str>,
+    branch: Option<&str>,
+) -> Result<()> {
     let mut tmpl = std::fs::read_to_string(template_path)
         .with_context(|| format!("read template {template_path:?}"))?;
     if let Some(c) = commit {
@@ -24,8 +29,7 @@ pub fn render_template(template_path: &Path, dockerfile: &Path, commit: Option<&
     }
 
     let rendered = env.get_template("dockerfile")?.render(ctx)?;
-    std::fs::write(dockerfile, rendered)
-        .with_context(|| format!("write {dockerfile:?}"))?;
+    std::fs::write(dockerfile, rendered).with_context(|| format!("write {dockerfile:?}"))?;
     Ok(())
 }
 

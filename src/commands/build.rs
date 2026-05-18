@@ -13,7 +13,12 @@ pub struct BuildArgs {
     pub rebuild: bool,
     #[arg(short = 't', long)]
     pub tag: Option<String>,
-    #[arg(short = 'f', long = "dockerfile", alias = "file", default_value = "Dockerfile")]
+    #[arg(
+        short = 'f',
+        long = "dockerfile",
+        alias = "file",
+        default_value = "Dockerfile"
+    )]
     pub dockerfile: PathBuf,
     #[arg(long, default_value = "Dockerfile.j2")]
     pub template_file: PathBuf,
@@ -25,13 +30,15 @@ pub struct BuildArgs {
     pub stage: Option<String>,
 }
 
-
-pub async fn run(ctx: &Ctx, mut a: BuildArgs) -> Result<String> {
+pub async fn run(ctx: &Ctx, a: BuildArgs) -> Result<String> {
     let mut tag = a.tag.clone();
     let mut directory = a.directory.clone();
     let mut buildargs: BTreeMap<String, String> = BTreeMap::new();
     let mut secrets: BTreeMap<String, PathBuf> = BTreeMap::new();
-    let mut stage = a.stage.clone().or_else(|| ctx.config.get_string("tests.stage"));
+    let stage = a
+        .stage
+        .clone()
+        .or_else(|| ctx.config.get_string("tests.stage"));
 
     if let Some(svc) = &a.service {
         if tag.is_none() {
@@ -41,7 +48,11 @@ pub async fn run(ctx: &Ctx, mut a: BuildArgs) -> Result<String> {
         if let Some(dir) = ctx.config.get_string(&format!("services.{svc}.build")) {
             directory = PathBuf::from(dir);
         }
-        load_buildargs(&ctx.config, &format!("services.{svc}.buildargs"), &mut buildargs);
+        load_buildargs(
+            &ctx.config,
+            &format!("services.{svc}.buildargs"),
+            &mut buildargs,
+        );
         load_secrets(&ctx.config, &format!("services.{svc}.mounts"), &mut secrets);
     } else {
         load_buildargs(&ctx.config, "tests.buildargs", &mut buildargs);

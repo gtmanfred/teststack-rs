@@ -11,7 +11,9 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Self { root: Value::Table(Default::default()) }
+        Self {
+            root: Value::Table(Default::default()),
+        }
     }
 }
 
@@ -53,7 +55,8 @@ impl Config {
     }
 
     pub fn get_string(&self, key: &str) -> Option<String> {
-        self.get(key).and_then(|v| v.as_str().map(|s| s.to_string()))
+        self.get(key)
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
     }
 
     pub fn get_table(&self, key: &str) -> IndexMap<String, Value> {
@@ -160,7 +163,9 @@ mod tests {
     fn semicolon_keys_passthrough() {
         let r = interp_with("{PORT;5432/tcp}", |_| None);
         assert_eq!(r, "{PORT;5432/tcp}");
-        let r = interp_with("{PORT;5432/tcp}", |k| (k == "PORT;5432/tcp").then(|| "5432".into()));
+        let r = interp_with("{PORT;5432/tcp}", |k| {
+            (k == "PORT;5432/tcp").then(|| "5432".into())
+        });
         assert_eq!(r, "5432");
     }
 }

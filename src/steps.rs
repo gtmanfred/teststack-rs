@@ -31,13 +31,15 @@ impl StepCommand {
 pub fn process_steps(table: IndexMap<String, Value>) -> IndexMap<String, Step> {
     let mut out: IndexMap<String, Step> = IndexMap::new();
     for (name, raw) in table {
-        let mut s = out.remove(&name).unwrap_or_default();
+        let mut s = out.shift_remove(&name).unwrap_or_default();
         s.name = name.clone();
         match raw {
             Value::String(c) => s.command = Some(StepCommand::One(c)),
             Value::Array(arr) => {
                 s.command = Some(StepCommand::Many(
-                    arr.into_iter().filter_map(|v| v.as_str().map(String::from)).collect(),
+                    arr.into_iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect(),
                 ));
             }
             Value::Table(t) => {
@@ -72,7 +74,9 @@ fn parse_cmd(v: &Value) -> Option<StepCommand> {
     match v {
         Value::String(s) => Some(StepCommand::One(s.clone())),
         Value::Array(arr) => Some(StepCommand::Many(
-            arr.iter().filter_map(|v| v.as_str().map(String::from)).collect(),
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect(),
         )),
         _ => None,
     }
@@ -82,7 +86,11 @@ pub trait StepRunner {
     fn run(&mut self, command: &str, user: Option<&str>) -> i64;
 }
 
-pub fn run_all<R: StepRunner>(steps: &mut IndexMap<String, Step>, runner: &mut R, posargs: &[String]) -> i64 {
+pub fn run_all<R: StepRunner>(
+    steps: &mut IndexMap<String, Step>,
+    runner: &mut R,
+    posargs: &[String],
+) -> i64 {
     let names: Vec<String> = steps.keys().cloned().collect();
     for n in names {
         let code = run_step(&n, steps, runner, posargs);
@@ -110,7 +118,10 @@ fn run_step<R: StepRunner>(
         }
     }
 
-    let required_by: Vec<String> = steps.get(name).map(|s| s.required_by.clone()).unwrap_or_default();
+    let required_by: Vec<String> = steps
+        .get(name)
+        .map(|s| s.required_by.clone())
+        .unwrap_or_default();
     if !required_by.is_empty() {
         let mut any_needed = false;
         for rb in &required_by {
@@ -128,7 +139,10 @@ fn run_step<R: StepRunner>(
         }
     }
 
-    let requires: Vec<String> = steps.get(name).map(|s| s.requires.clone()).unwrap_or_default();
+    let requires: Vec<String> = steps
+        .get(name)
+        .map(|s| s.requires.clone())
+        .unwrap_or_default();
     let mut req_code = 0i64;
     for r in &requires {
         let c = run_step(r, steps, runner, posargs);
@@ -156,7 +170,10 @@ fn do_check<R: StepRunner>(
     if let Some(c) = steps.get(name).and_then(|s| s.check_exit_code) {
         return c;
     }
-    let required_by: Vec<String> = steps.get(name).map(|s| s.required_by.clone()).unwrap_or_default();
+    let required_by: Vec<String> = steps
+        .get(name)
+        .map(|s| s.required_by.clone())
+        .unwrap_or_default();
     if !required_by.is_empty() {
         let mut code = 1i64;
         for rb in &required_by {
@@ -176,7 +193,12 @@ fn do_check<R: StepRunner>(
     1
 }
 
-fn run_cmd<R: StepRunner>(cmd: &StepCommand, user: Option<&str>, runner: &mut R, posargs: &[String]) -> i64 {
+fn run_cmd<R: StepRunner>(
+    cmd: &StepCommand,
+    user: Option<&str>,
+    runner: &mut R,
+    posargs: &[String],
+) -> i64 {
     let joined = posargs.join(" ");
     let mut total = 0i64;
     for c in cmd.to_vec() {
@@ -237,9 +259,15 @@ mod tests {
         let t = v.get("steps").unwrap().as_table().unwrap().clone();
         let map: IndexMap<String, Value> = t.into_iter().collect();
         let mut steps = process_steps(map);
-        let mut runner = Fake { log: vec![], map: BTreeMap::new() };
+        let mut runner = Fake {
+            log: vec![],
+            map: BTreeMap::new(),
+        };
         run_all(&mut steps, &mut runner, &[]);
-        assert_eq!(runner.log, vec!["pip install", "migrate", "flake8", "pytest"]);
+        assert_eq!(
+            runner.log,
+            vec!["pip install", "migrate", "flake8", "pytest"]
+        );
     }
 
     #[test]
@@ -255,7 +283,10 @@ mod tests {
         let t = v.get("steps").unwrap().as_table().unwrap().clone();
         let map: IndexMap<String, Value> = t.into_iter().collect();
         let mut steps = process_steps(map);
-        let mut runner = Fake { log: vec![], map: BTreeMap::new() };
+        let mut runner = Fake {
+            log: vec![],
+            map: BTreeMap::new(),
+        };
         run_all(&mut steps, &mut runner, &[]);
         let env_pos = runner.log.iter().position(|c| c == "env").unwrap();
         let touch_pos = runner.log.iter().position(|c| c == "cp a b").unwrap();

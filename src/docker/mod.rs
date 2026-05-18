@@ -52,10 +52,20 @@ pub trait Backend: Send + Sync {
     async fn stop_remove(&self, name: &str) -> Result<()>;
     async fn status(&self, name: &str) -> Result<String>;
     async fn logs(&self, name: &str) -> Result<String>;
-    async fn inspect_data(&self, name: &str, network: &str, inside: bool) -> Result<Option<ContainerData>>;
+    async fn inspect_data(
+        &self,
+        name: &str,
+        network: &str,
+        inside: bool,
+    ) -> Result<Option<ContainerData>>;
     async fn build(&self, opts: BuildOpts) -> Result<()>;
     async fn exec_run(&self, container: &str, command: &str, user: Option<&str>) -> Result<i64>;
-    async fn exec_interactive(&self, container: &str, command: &[String], user: Option<&str>) -> Result<()>;
+    async fn exec_interactive(
+        &self,
+        container: &str,
+        command: &[String],
+        user: Option<&str>,
+    ) -> Result<()>;
 }
 
 #[derive(Debug, Clone)]

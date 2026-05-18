@@ -7,7 +7,11 @@ use crate::config::Config;
 use crate::docker::{Backend, BollardBackend};
 
 #[derive(Parser, Debug)]
-#[command(name = "ts", version, about = "Manage container infrastructure for tests")]
+#[command(
+    name = "ts",
+    version,
+    about = "Manage container infrastructure for tests"
+)]
 pub struct GlobalArgs {
     #[arg(short = 'c', long, default_value = "teststack.toml")]
     pub config: PathBuf,
@@ -36,7 +40,9 @@ pub struct Ctx {
 impl Ctx {
     pub fn backend(&self) -> &dyn Backend {
         self.backend
-            .get_or_init(|| Box::new(BollardBackend::connect().expect("docker daemon")) as Box<dyn Backend>)
+            .get_or_init(|| {
+                Box::new(BollardBackend::connect().expect("docker daemon")) as Box<dyn Backend>
+            })
             .as_ref()
     }
 }
@@ -56,14 +62,22 @@ pub async fn run_cli() -> Result<()> {
     }
 
     if split_at == argv.len() {
-        if globals.iter().skip(1).any(|s| matches!(s.as_str(), "-h" | "--help")) {
+        if globals
+            .iter()
+            .skip(1)
+            .any(|s| matches!(s.as_str(), "-h" | "--help"))
+        {
             let mut cmd = GlobalArgs::command();
             cmd.print_help()?;
             println!("\nCommands: {}", SUBS.join(", "));
             println!("\nChain commands by listing them in order, e.g. `teststack stop start run`.");
             return Ok(());
         }
-        if globals.iter().skip(1).any(|s| matches!(s.as_str(), "-V" | "--version")) {
+        if globals
+            .iter()
+            .skip(1)
+            .any(|s| matches!(s.as_str(), "-V" | "--version"))
+        {
             match GlobalArgs::try_parse_from(&globals) {
                 Err(e) => e.exit(),
                 _ => return Ok(()),
@@ -140,7 +154,9 @@ fn build_ctx(g: GlobalArgs) -> Result<Ctx> {
         tag = format!("{tag}-{stage}");
     }
 
-    let client_name = config.get_string("client.name").unwrap_or_else(|| "docker".into());
+    let client_name = config
+        .get_string("client.name")
+        .unwrap_or_else(|| "docker".into());
     if client_name != "docker" {
         anyhow::bail!("client.name = {client_name:?} not supported in v1 (docker only)");
     }
@@ -157,8 +173,12 @@ fn build_ctx(g: GlobalArgs) -> Result<Ctx> {
 }
 
 fn parse_sub<T: FromArgMatches + ClapArgs>(name: &str, args: &[String]) -> Result<T> {
-    let cmd = T::augment_args(clap::Command::new(Box::leak(name.to_string().into_boxed_str()) as &'static str));
-    let argv: Vec<String> = std::iter::once(name.to_string()).chain(args.iter().cloned()).collect();
+    let cmd = T::augment_args(clap::Command::new(
+        Box::leak(name.to_string().into_boxed_str()) as &'static str,
+    ));
+    let argv: Vec<String> = std::iter::once(name.to_string())
+        .chain(args.iter().cloned())
+        .collect();
     let matches = match cmd.try_get_matches_from(argv) {
         Ok(m) => m,
         Err(e) => e.exit(),
@@ -172,7 +192,9 @@ async fn run_segment(ctx: &Ctx, name: &str, args: &[String]) -> Result<()> {
         "status" => commands::status::run(ctx).await,
         "restart" => {
             commands::stop::run(ctx, Default::default()).await?;
-            commands::start::run(ctx, Default::default()).await.map(|_| ())
+            commands::start::run(ctx, Default::default())
+                .await
+                .map(|_| ())
         }
         "start" => {
             let a = parse_sub::<commands::start::StartArgs>(name, args)?;
